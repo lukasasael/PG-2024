@@ -55,7 +55,6 @@ Object* CreateCube() {
     return new Mesh(vertices, faces);
 }
 
-
 Object* CreateIcosaedro() {
     const double t = (1.0 + std::sqrt(5.0)) / 2.0;
     std::vector<Vector3> vertices = {
@@ -223,11 +222,127 @@ void Scene_3(){
     FileWriter::saveAsImage(image_ppm);
 }
 
+class Toro {
+    public:
+
+    Toro(double centro_y, double centro_z, double R, double r) :
+        //centro_y(centro_y),
+        //centro_z(centro_z),
+        R(R),
+        r(r) {}
+        //double centro_y;
+        //double centro_z;
+        double R;
+        double r;
+
+    double calculatePi(int terms) {
+        double sum = 0.0;
+        for (int i = 0; i < terms; i++) {
+            if (i % 2 == 0) {  // índice par
+                sum += 1.0 / (2 * i + 1);
+            } else {           // índice ímpar
+                sum -= 1.0 / (2 * i + 1);
+            }
+        }
+        return sum * 4;
+    }
+
+    double pi = calculatePi(1000);
+    //double pi = 2 * atan(1);
+
+    Vector3 pointOnSurface(double theta, double alpha) {
+        double x = (this->R + this->r * cos(theta)) * cos(alpha);
+        double z = (this->R + this->r * cos(theta)) * sin(alpha);
+        double y = this->r * sin(theta);
+        Vector3 point = {x, y, z};
+        return point;
+    }
+
+    std::vector<double> definirEspacamento(double espacamento) {
+        std::vector<double> valores;
+        for (double i = 0; i <= 2 * pi + espacamento; i += espacamento) {
+            valores.push_back(i);
+        }
+        if (valores.back() > 2 * pi) {
+            valores.pop_back();
+        }
+        if (valores.back() < 2 * pi) {
+            valores.push_back(2 * pi);
+        }
+        return valores;
+    }
+
+    Mesh* triangularizar(double espacamento) {
+        vector<Vector3> pontosToro;
+        std::vector<double> theta_values = definirEspacamento(espacamento);
+        std::vector<double> alpha_values = definirEspacamento(espacamento);
+
+        for (double theta : theta_values) {
+            for (double alpha : alpha_values) {
+                Vector3 ponto = pointOnSurface(theta, alpha);
+                pontosToro.push_back(ponto);
+            }
+        }
+
+        // Lista para armazenar os triângulos como triplas de índices
+        vector<tuple<int, int, int>> triplas;
+        int n = static_cast<int>(2 * pi / espacamento);
+
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                if ((i + 1) * (n + 1) + j + 1 < pontosToro.size() &&
+                    (i + 1) * (n + 1) + j < pontosToro.size() &&
+                    i * (n + 1) + j + 1 < pontosToro.size()) {
+                    triplas.push_back({i * (n + 1) + j, (i + 1) * (n + 1) + j, i * (n + 1) + j + 1});
+                    triplas.push_back({(i + 1) * (n + 1) + j, (i + 1) * (n + 1) + j + 1, i * (n + 1) + j + 1});
+                }
+            }
+        }
+
+        return new Mesh(pontosToro, triplas);
+    }
+};
+
+Object* CreateToro() {
+    Toro toro(0, 0, 1, 0.5);
+    return toro.triangularizar(0.05);
+}
+
+void Scene_4(){
+    colorRGB RED   = {255,0,0};
+    colorRGB GREEN = {0,255,0};
+    colorRGB BLUE  = {0,0,255};
+    colorRGB YELLOW  = {255,255,0};
+
+    int RESOLUTION = 512;
+    Camera camera = Camera(RESOLUTION, RESOLUTION, ((double)RESOLUTION/512)*1000);
+    camera.transform.position = Vector3(0,2,-10);
+    camera.transform.rotation = Vector3(5,0,0);
+
+    //Object* plane = new Plane(Vector3().ONE, Vector3(0,0,0), Vector3(0,0,0));
+    //Object* cube = CreateCube();
+    Object* renderToro = CreateToro();
+
+    //plane->color = GREEN;
+    //cube->color = YELLOW;
+    renderToro->color = RED;
+
+
+    vector<Object*> objects;
+    //objects.push_back(plane);
+    //objects.push_back(cube);
+    objects.push_back(renderToro);
+
+    string image_ppm = camera.render(objects);
+    FileWriter::saveAsImage(image_ppm);
+}
 
 int main() {
     //Scene_1();
     //Scene_2();
-    Scene_3();
+    //Scene_3();
+    Scene_4();
+
     
     std::cout << "\n===============================\n" << std::endl;
     return 0;
