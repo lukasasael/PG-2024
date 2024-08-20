@@ -247,7 +247,7 @@ class Toro {
         return sum * 4;
     }
 
-    double pi = calculatePi(1000);
+    double pi = calculatePi(300);
     //double pi = 2 * atan(1);
 
     Vector3 pointOnSurface(double theta, double alpha) {
@@ -274,8 +274,8 @@ class Toro {
 
     Mesh* triangularizar(double espacamento) {
         vector<Vector3> pontosToro;
-        std::vector<double> theta_values = definirEspacamento(espacamento);
-        std::vector<double> alpha_values = definirEspacamento(espacamento);
+        std::vector<double> theta_values = definirEspacamento(espacamento); //pontos do circulo
+        std::vector<double> alpha_values = definirEspacamento(espacamento); //circulos
 
         for (double theta : theta_values) {
             for (double alpha : alpha_values) {
@@ -305,7 +305,7 @@ class Toro {
 
 Object* CreateToro() {
     Toro toro(0, 0, 1, 0.5);
-    return toro.triangularizar(0.05);
+    return toro.triangularizar(1.0);
 }
 
 void Scene_4(){
@@ -319,8 +319,6 @@ void Scene_4(){
     camera.transform.position = Vector3(0,2,-10);
     camera.transform.rotation = Vector3(5,0,0);
 
-    //Object* plane = new Plane(Vector3().ONE, Vector3(0,0,0), Vector3(0,0,0));
-    //Object* cube = CreateCube();
     Object* renderToro = CreateToro();
 
     //plane->color = GREEN;
@@ -329,30 +327,65 @@ void Scene_4(){
 
 
     vector<Object*> objects;
-    //objects.push_back(plane);
-    //objects.push_back(cube);
     objects.push_back(renderToro);
 
     string image_ppm = camera.render(objects);
     FileWriter::saveAsImage(image_ppm);
 }
 
+class Bezier {
+
+    public:
+
+    Bezier(vector<double*> curve1, vector<double*> curve2, vector<double*> curve3) :
+            curve1(curve1),
+            curve2(curve2),
+            curve3(curve3)
+            {}
+    vector<double*> curve1;
+    vector<double*> curve2;
+    vector<double*> curve3;
+
+    Mesh* createSurface(double espacamento){
+
+    }
+};
+
+Object* CreateBezier() {
+    Bezier curves( {ponto}, {ponto}, {ponto});
+    return curves.createSurface( 0.1 );
+}
+
+void Scene_5(){
+
+    colorRGB RED   = {255,0,0};
+    colorRGB GREEN = {0,255,0};
+    colorRGB BLUE  = {0,0,255};
+    colorRGB YELLOW  = {255,255,0};
+
+    int RESOLUTION = 512;
+    Camera camera = Camera(RESOLUTION, RESOLUTION, ((double)RESOLUTION/512)*1000);
+    camera.transform.position = Vector3(0,2,-10);
+    camera.transform.rotation = Vector3(5,0,0);
+
+    Object* renderBezier = CreateBezier();
+
+    vector<Object*> objects;
+    objects.push_back(renderBezier);
+
+    string image_ppm = camera.render(objects);
+    FileWriter::saveAsImage(image_ppm);
+
+}
+
 int main() {
     //Scene_1();
     //Scene_2();
     //Scene_3();
-    Scene_4();
+    //Scene_4();
+    Scene_5();
 
     
     std::cout << "\n===============================\n" << std::endl;
     return 0;
 }
-
-
-
-
-
-
-
-
-
