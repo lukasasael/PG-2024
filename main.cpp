@@ -333,6 +333,28 @@ void Scene_4(){
     FileWriter::saveAsImage(image_ppm);
 }
 
+//Função auxiliar para fatorial
+double factorial(int n) {
+    if (n == 0) {
+        return 1;
+    } else {
+        return n * factorial(n - 1);
+    }
+}
+//Função auxiliar para gerar B(t)
+double bernsteinCoefficient(int i, int n, double t) {
+    return (double) factorial(n) / (factorial(i) * factorial(n - i)) * pow(t, i) * pow(1 - t, n - i);
+}
+
+double bernsteinPolynomial(const std::vector<double>& controlPoints, double t, int n) {
+    double result = 0.0;
+    for (int i = 0; i <= n; ++i) {
+        result += controlPoints[i] * bernsteinCoefficient(i, n, t);
+        //bernsteinCoefficient(i, n, s) * (bernsteinCoefficient(i, n, t) * bij);  SERIA ISSO?
+    }
+    return result;
+}
+
 class Bezier {
 
     public:
@@ -352,8 +374,16 @@ class Bezier {
 };
 
 Object* CreateBezier() {
-    Bezier curves( {ponto}, {ponto}, {ponto});
-    return curves.createSurface( 0.1 );
+    std::vector<double> controlPoints = {0.0, 1.0, 2.0, 3.0}; //TROCAR ISSO PARA SEREM GERADOS POR UMA FUNÇÃO
+    int n = controlPoints.size() - 1;
+    double t = 0.5; // Parameter value (between 0 and 1)
+    double polynomialValue = bernsteinPolynomial(controlPoints, t, n);
+
+    return 0; //???
+}
+
+Object *CreateCurve() {
+    return 0; //retorna um ponto pertencente a curva de bezier a partir de um parametro que vai de 0 a 1
 }
 
 void Scene_5(){
