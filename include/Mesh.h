@@ -33,7 +33,7 @@ class Mesh : public Object {
     protected:
         std::vector<Vector3> vertices;
         std::vector<std::tuple<int, int, int>> faces;
-    
+
     private:
         std::vector<Vector3> vertice_normal;
         std::vector<Vector3> face_normal;

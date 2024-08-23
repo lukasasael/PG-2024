@@ -354,7 +354,7 @@ public:
         this->pontosdeControle = pontos;
     }
 
-    // Função que retorna o polinômio de Bernstein
+    // Função que um ponto na Curva
     Vector3 pontosdaCurva(double t, const std::vector<Vector3>& points) {
         Vector3 result = Vector3::ZERO;
         unsigned int n = points.size() - 1;  // Grau do polinômio de Bernstein
@@ -369,35 +369,69 @@ public:
 
 };
 
-class BezierSurface {
-
-    public:
-    vector<Curva> pontos;
-    BezierSurface(vector<Curva> pontos) {
-        this->pontos = pontos;
+class SuperficieBezier {
+public:
+    vector<Curva> curvas;
+    SuperficieBezier(vector<Curva> curvas) {
+        this->curvas = curvas;
     }
 
-    // Crie um vetor de pontos de controle
-    std::vector<Vector3> pontosControle = {
-            Vector3(0.0, 0.0, 0.0), // Ponto 1
-            Vector3(1.0, 1.0, 0.0), // Ponto 2
-            Vector3(2.0, 0.0, 0.0), // Ponto 3
-    };
+    // Função que retorna um ponto na superfície de Bézier
+    Vector3 pontoSuperficie(double u, double v) {
+        Vector3 result = Vector3::ZERO;
+        unsigned int n = curvas.size() - 1; // Grau da superfície de Bézier
 
-    // Crie um objeto Curva com os pontos de controle
-    Curva minhaCurva(pontosControle);
+        for (unsigned int i = 0; i <= n; ++i) {
+            double coefficient = binomial(n, i) * std::pow(u, i) * std::pow(1 - u, n - i);
+            result = result + curvas[i].pontosdaCurva(v, curvas[i].pontosdeControle) * coefficient;
+        }
 
+        return result;
+    }
+
+    // Função que gera uma malha de pontos para a superfície de Bézier
+    vector<Vector3> gerarMalha(int resolucaoU, int resolucaoV) {
+        vector<Vector3> malha;
+        for (int i = 0; i <= resolucaoU; ++i) {
+            for (int j = 0; j <= resolucaoV; ++j) {
+                double u = (double)i / resolucaoU;
+                double v = (double)j / resolucaoV;
+                malha.push_back(pontoSuperficie(u, v));
+            }
+        }
+        return malha;
+    }
 };
 
 Object* CreateBezier() {
+    // Define os pontos de controle da superfície de Bézier
+    vector<Vector3> pontosControleCurva1 = {Vector3(-2, -2, 0), Vector3(-1, 2, 0), Vector3(1, 2, 0), Vector3(2, -2, 0)};
+    vector<Vector3> pontosControleCurva2 = {Vector3(-2, -1, 0), Vector3(-1, 1, 0), Vector3(1, 1, 0), Vector3(2, -1, 0)};
+    vector<Vector3> pontosControleCurva3 = {Vector3(-2, 0, 0), Vector3(-1, 0, 0), Vector3(1, 0, 0), Vector3(2, 0, 0)};
+    vector<Vector3> pontosControleCurva4 = {Vector3(-2, 1, 0), Vector3(-1, -1, 0), Vector3(1, -1, 0), Vector3(2, 1, 0)};
 
-    int n = controlPoints.size() - 1;
-    double t = 0.5; // Parameter value (between 0 and 1)
-    double polynomialValue = bernsteinPolynomial(controlPoints, t, n);
+    // Cria as curvas de Bézier
+    Curva curva1 = Curva(pontosControleCurva1);
+    Curva curva2 = Curva(pontosControleCurva2);
+    Curva curva3 = Curva(pontosControleCurva3);
+    Curva curva4 = Curva(pontosControleCurva4);
 
-    return 0; //???
+    // Cria a superfície de Bézier
+    vector<Curva> curvas = {curva1, curva2, curva3, curva4};
+    SuperficieBezier superficie = SuperficieBezier(curvas);
+
+    // Gera a malha de pontos para a superfície de Bézier
+    vector<Vector3> malha = superficie.gerarMalha(10, 10);
+
+    // Cria o objeto de renderização
+    Object* object = new Object();
+    object->type = ObjectType::MESH;
+    object->mesh = new Mesh();
+    object->mesh->vertices = malha;
+    object->mesh->indices = {};
+
+    return object;
 }
-
 
 void Scene_5(){
 
@@ -412,6 +446,7 @@ void Scene_5(){
     camera.transform.rotation = Vector3(5,0,0);
 
     Object* renderBezier = CreateBezier();
+    renderBezier->color = GREEN;
 
     vector<Object*> objects;
     objects.push_back(renderBezier);
