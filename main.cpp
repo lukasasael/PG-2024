@@ -337,7 +337,7 @@ void Scene_4(){
 unsigned long factorial(unsigned int n) {
     unsigned long result = 1;
     for (unsigned int i = 2; i <= n; ++i)
-        result = i;
+        result *= i;
     return result;
 }
 // Função auxiliar para calcular o coeficiente binomial
@@ -347,57 +347,99 @@ unsigned long binomial(unsigned int n, unsigned int k) {
     return factorial(n) / (factorial(k) * factorial(n - k));
 }
 
-class Curva {
+/*class Curva {
 public:
-    vector<Vector3> pontosdeControle;
-    Curva(vector<Vector3> pontos) {
+    std::vector<Vector3> pontosdeControle;
+    Curva(std::vector<Vector3> pontos) {
         this->pontosdeControle = pontos;
     }
 
     // Função que retorna o polinômio de Bernstein
-    Vector3 pontosdaCurva(double t, const std::vector<Vector3>& points) {
+    Vector3 pontosdaCurva(double t) {
         Vector3 result = Vector3::ZERO;
-        unsigned int n = points.size() - 1;  // Grau do polinômio de Bernstein
+        unsigned int n = pontosdeControle.size() - 1;  // Grau do polinômio de Bernstein
 
         for (unsigned int i = 0; i <= n; ++i) {
             double coefficient = binomial(n, i) * std::pow(t, i) * std::pow(1 - t, n - i);
-            result = result + points[i] * coefficient;
+            result = result + pontosdeControle[i] * coefficient;
         }
 
         return result;
     }
+};*/
 
-};
+class SuperficieBezier {
+public:
+    std::vector<std::vector<Vector3>> pontosDeControle;
 
-class BezierSurface {
-
-    public:
-    vector<Curva> pontos;
-    BezierSurface(vector<Curva> pontos) {
-        this->pontos = pontos;
+    SuperficieBezier(std::vector<std::vector<Vector3>> pontos) {
+        this->pontosDeControle = pontos;
     }
 
-    // Crie um vetor de pontos de controle
-    std::vector<Vector3> pontosControle = {
-            Vector3(0.0, 0.0, 0.0), // Ponto 1
-            Vector3(1.0, 1.0, 0.0), // Ponto 2
-            Vector3(2.0, 0.0, 0.0), // Ponto 3
-    };
+    // Função para calcular um ponto na superfície de Bézier
+    Vector3 pontoNaSuperficie(double u, double v) {
+        unsigned int n = pontosDeControle.size() - 1; // Grau em u
+        unsigned int m = pontosDeControle[0].size() - 1; // Grau em v
 
-    // Crie um objeto Curva com os pontos de controle
-    Curva minhaCurva(pontosControle);
+        Vector3 result = Vector3::ZERO;
 
+        for (unsigned int i = 0; i <= n; ++i) {
+            for (unsigned int j = 0; j <= m; ++j) {
+                double coefficient = binomial(n, i) * std::pow(u, i) * std::pow(1 - u, n - i) *
+                                     binomial(m, j) * std::pow(v, j) * std::pow(1 - v, m - j);
+                result = result + pontosDeControle[i][j] * coefficient;
+            }
+        }
+
+        return result;
+    }
 };
 
-Object* CreateBezier() {
+// Função para criar um objeto de superfície de Bézier
+Object* CreateBezier(std::vector<std::vector<Vector3>> pontosControle) {
+    // Crie um objeto SuperficieBezier com os pontos de controle
+    SuperficieBezier minhaSuperficie(pontosControle);
 
-    int n = controlPoints.size() - 1;
-    double t = 0.5; // Parameter value (between 0 and 1)
-    double polynomialValue = bernsteinPolynomial(controlPoints, t, n);
+    // Crie um objeto para representar a superfície de Bézier
+    Object* superficieBezier = new Object();
+    superficieBezier->color = {255, 255, 255}; // Define a cor da superfície
 
-    return 0; //???
+    // Define a resolução da malha para renderizar a superfície
+    const int resolucaoU = 20;
+    const int resolucaoV = 20;
+
+    // Loop para iterar sobre os pontos da superfície
+    for (int i = 0; i <= resolucaoU; ++i) {
+        for (int j = 0; j <= resolucaoV; ++j) {
+            // Calcula as coordenadas u e v para o ponto atual
+            double u = (double)i / resolucaoU;
+            double v = (double)j / resolucaoV;
+
+            // Calcula o ponto na superfície usando a função pontoNaSuperficie
+            Vector3 ponto = minhaSuperficie.pontoNaSuperficie(u, v);
+
+            // Adiciona o ponto ao objeto da superfície de Bézier
+            superficieBezier->vertices.push_back(ponto);
+        }
+    }
+
+    // Crie as faces da superfície de Bézier (triângulos)
+    for (int i = 0; i < resolucaoU; ++i) {
+        for (int j = 0; j < resolucaoV; ++j) {
+            // Calcula os índices dos vértices para criar os triângulos
+            int indice1 = i * (resolucaoV + 1) + j;
+            int indice2 = i * (resolucaoV + 1) + j + 1;
+            int indice3 = (i + 1) * (resolucaoV + 1) + j;
+            int indice4 = (i + 1) * (resolucaoV + 1) + j + 1;
+
+            // Adiciona os triângulos ao objeto da superfície de Bézier
+            superficieBezier->faces.push_back({indice1, indice2, indice3});
+            superficieBezier->faces.push_back({indice2, indice4, indice3});
+        }
+    }
+
+    return superficieBezier;
 }
-
 
 void Scene_5(){
 
@@ -411,14 +453,21 @@ void Scene_5(){
     camera.transform.position = Vector3(0,2,-10);
     camera.transform.rotation = Vector3(5,0,0);
 
-    Object* renderBezier = CreateBezier();
+    std::vector<std::vector<Vector3>> pontosControle = {
+            { Vector3(0.0, 0.0, 0.0), Vector3(1.0, 1.0, 0.0), Vector3(2.0, 0.0, 0.0) },
+            { Vector3(0.0, 1.0, 0.0), Vector3(1.0, 0.0, 0.0), Vector3(2.0, 1.0, 0.0) },
+            { Vector3(0.0, 0.0, 1.0), Vector3(1.0, 1.0, 1.0), Vector3(2.0, 0.0, 1.0) }
+    };
+
+    Object* renderBezier = CreateBezier(pontosControle);
+
+    renderBezier->color = RED;
 
     vector<Object*> objects;
     objects.push_back(renderBezier);
 
     string image_ppm = camera.render(objects);
     FileWriter::saveAsImage(image_ppm);
-
 }
 
 int main() {

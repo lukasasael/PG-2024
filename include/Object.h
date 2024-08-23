@@ -21,6 +21,9 @@ class Object {
 
         void setColor(int r, int g, int b);
         std::string getColor();
+        std::vector<Vector3> vertices;
+        std::vector<std::tuple<int, int, int>> faces;
+
 
     protected:
 
