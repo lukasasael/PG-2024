@@ -333,48 +333,64 @@ void Scene_4(){
     FileWriter::saveAsImage(image_ppm);
 }
 
-//Função auxiliar para fatorial
-double factorial(int n) {
-    if (n == 0) {
-        return 1;
-    } else {
-        return n * factorial(n - 1);
-    }
-}
-//Função auxiliar para gerar B(t)
-double bernsteinCoefficient(int i, int n, double t) {
-    return (double) factorial(n) / (factorial(i) * factorial(n - i)) * pow(t, i) * pow(1 - t, n - i);
-}
-
-double bernsteinPolynomial(const std::vector<double>& controlPoints, double t, int n) {
-    double result = 0.0;
-    for (int i = 0; i <= n; ++i) {
-        result += controlPoints[i] * bernsteinCoefficient(i, n, t);
-        //bernsteinCoefficient(i, n, s) * (bernsteinCoefficient(i, n, t) * bij);  SERIA ISSO?
-    }
+// Função auxiliar para calcular o fatorial
+unsigned long factorial(unsigned int n) {
+    unsigned long result = 1;
+    for (unsigned int i = 2; i <= n; ++i)
+        result = i;
     return result;
 }
+// Função auxiliar para calcular o coeficiente binomial
+unsigned long binomial(unsigned int n, unsigned int k) {
+    if (k > n) return 0;
+    if (k == 0 || k == n) return 1;
+    return factorial(n) / (factorial(k) * factorial(n - k));
+}
 
-class Bezier {
+class Curva {
+public:
+    vector<Vector3> pontosdeControle;
+    Curva(vector<Vector3> pontos) {
+        this->pontosdeControle = pontos;
+    }
+
+    // Função que retorna o polinômio de Bernstein
+    Vector3 pontosdaCurva(double t, const std::vector<Vector3>& points) {
+        Vector3 result = Vector3::ZERO;
+        unsigned int n = points.size() - 1;  // Grau do polinômio de Bernstein
+
+        for (unsigned int i = 0; i <= n; ++i) {
+            double coefficient = binomial(n, i) * std::pow(t, i) * std::pow(1 - t, n - i);
+            result = result + points[i] * coefficient;
+        }
+
+        return result;
+    }
+
+};
+
+class BezierSurface {
 
     public:
-
-    Bezier(vector<double*> curve1, vector<double*> curve2, vector<double*> curve3) :
-            curve1(curve1),
-            curve2(curve2),
-            curve3(curve3)
-            {}
-    vector<double*> curve1;
-    vector<double*> curve2;
-    vector<double*> curve3;
-
-    Mesh* createSurface(double espacamento){
-
+    vector<Curva> pontos;
+    BezierSurface(vector<Curva> pontos) {
+        this->pontos = pontos;
     }
+
+    // Crie um vetor de pontos de controle
+    std::vector<Vector3> pontosControle = {
+            Vector3(0.0, 0.0, 0.0), // Ponto 1
+            Vector3(1.0, 1.0, 0.0), // Ponto 2
+            Vector3(2.0, 0.0, 0.0), // Ponto 3
+    };
+
+    // Crie um objeto Curva com os pontos de controle
+    Curva minhaCurva(pontosControle);
+
 };
 
 Object* CreateBezier() {
-    std::vector<double> controlPoints = {0.0, 1.0, 2.0, 3.0}; //TROCAR ISSO PARA SEREM GERADOS POR UMA FUNÇÃO
+
     int n = controlPoints.size() - 1;
     double t = 0.5; // Parameter value (between 0 and 1)
     double polynomialValue = bernsteinPolynomial(controlPoints, t, n);
@@ -382,9 +398,6 @@ Object* CreateBezier() {
     return 0; //???
 }
 
-Object *CreateCurve() {
-    return 0; //retorna um ponto pertencente a curva de bezier a partir de um parametro que vai de 0 a 1
-}
 
 void Scene_5(){
 
