@@ -354,7 +354,7 @@ public:
         this->pontosdeControle = pontos;
     }
 
-    // Função que retorna o polinômio de Bernstein
+    // Função que um ponto na Curva
     Vector3 pontosdaCurva(double t, const std::vector<Vector3>& points) {
         Vector3 result = Vector3::ZERO;
         unsigned int n = points.size() - 1;  // Grau do polinômio de Bernstein
@@ -369,35 +369,75 @@ public:
 
 };
 
-class BezierSurface {
-
-    public:
-    vector<Curva> pontos;
-    BezierSurface(vector<Curva> pontos) {
-        this->pontos = pontos;
+class SuperficieBezier {
+public:
+    vector<Curva> curvas;
+    SuperficieBezier(vector<Curva> curvas) {
+        this->curvas = curvas;
     }
 
-    // Crie um vetor de pontos de controle
-    std::vector<Vector3> pontosControle = {
-            Vector3(0.0, 0.0, 0.0), // Ponto 1
-            Vector3(1.0, 1.0, 0.0), // Ponto 2
-            Vector3(2.0, 0.0, 0.0), // Ponto 3
-    };
+    // Função que retorna um ponto na superfície de Bézier
+    Vector3 pontoSuperficie(double u, double v) {
+        Vector3 result = Vector3::ZERO;
+        unsigned int n = curvas.size() - 1; // Grau da superfície de Bézier
 
-    // Crie um objeto Curva com os pontos de controle
-    Curva minhaCurva(pontosControle);
+        for (unsigned int i = 0; i <= n; ++i) {
+            double coefficient = binomial(n, i) * std::pow(u, i) * std::pow(1 - u, n - i);
+            result = result + curvas[i].pontosdaCurva(v, curvas[i].pontosdeControle) * coefficient;
+        }
+
+        return result;
+    }
+
+    // Função que gera uma malha de pontos para a superfície de Bézier
+    Mesh* gerarMalha(double espacamento) {
+        vector<Vector3> superficieBezier;
+
+        vector<vector<Vector3>> pontosTodos;
+        for (double u = 0; u <= 1 ;u = u + espacamento) {
+            vector<Vector3> pontosFileira;
+            for (double v = 0; v <= 1 ;v = v + espacamento) {
+                Vector3 ponto = pontoSuperficie(u,v);
+                pontosFileira.push_back(ponto);
+                superficieBezier.push_back(ponto);
+            }
+            pontosTodos.push_back(pontosFileira);
+        }// se der errado tá passando por referencia, ñ por cópia
+
+        vector<tuple<int, int, int>> triplas;
+        for (int i = 0; i < 1 / espacamento; i++) {
+            for (int j = 0; j < 1 / espacamento; ++j) {
+                int ponto1 = (i * 6) + j; //alterar esse 6 para ser em função do espacamento
+                int ponto2 = (i * 6) + (j + 1);
+                int ponto3 = ((i + 1) * 6) + j;
+                int ponto4 = ((i + 1) * 6) + (j + 1);
+                triplas.push_back({ponto1, ponto2, ponto3});
+                triplas.push_back({ponto2, ponto3, ponto4});
+            }
+        }
+
+        return new Mesh(superficieBezier, triplas);
+    }
 
 };
 
 Object* CreateBezier() {
+    // Define os pontos de controle da superfície de Bézier
+    vector<Vector3> pontosControleCurva1 = {Vector3(-2, -1, 0), Vector3(-2, 0, 3), Vector3(-2, 1, 0)};
+    vector<Vector3> pontosControleCurva2 = {Vector3(0, -1, 1.5), Vector3(0, 0, -1.5), Vector3(0, 0, -1.5)};
+    vector<Vector3> pontosControleCurva3 = {Vector3(2, -1, 0), Vector3(2, 0, 3), Vector3(2, 1, 0)};
 
-    int n = controlPoints.size() - 1;
-    double t = 0.5; // Parameter value (between 0 and 1)
-    double polynomialValue = bernsteinPolynomial(controlPoints, t, n);
+    // Cria as curvas de Bézier
+    Curva curva1 = Curva(pontosControleCurva1);
+    Curva curva2 = Curva(pontosControleCurva2);
+    Curva curva3 = Curva(pontosControleCurva3);
 
-    return 0; //???
+    // Cria a superfície de Bézier
+    vector<Curva> curvas = {curva1, curva2, curva3};
+    SuperficieBezier superficie = SuperficieBezier(curvas);
+
+    return superficie.gerarMalha(0.2);
 }
-
 
 void Scene_5(){
 
@@ -408,10 +448,11 @@ void Scene_5(){
 
     int RESOLUTION = 512;
     Camera camera = Camera(RESOLUTION, RESOLUTION, ((double)RESOLUTION/512)*1000);
-    camera.transform.position = Vector3(0,2,-10);
+    camera.transform.position = Vector3(0,0,-10);
     camera.transform.rotation = Vector3(5,0,0);
 
     Object* renderBezier = CreateBezier();
+    renderBezier->color = GREEN;
 
     vector<Object*> objects;
     objects.push_back(renderBezier);
